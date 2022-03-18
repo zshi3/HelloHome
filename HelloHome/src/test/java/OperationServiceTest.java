@@ -93,7 +93,7 @@ class OperationServiceTest {
         Token token = new Token(ss);
         //check role for non-existing user
         Exception e=Assertions.assertThrows(RuntimeException.class, () -> operationService.checkRole(user,role,token));
-        String expected="Invalid token dGVzdFVzZXJwdw==";
+        String expected="Invalid token ";
         String actual=e.getMessage();
         assertTrue(actual.contains(expected));
         //check role for an existing user with valid token
@@ -122,7 +122,7 @@ class OperationServiceTest {
         //get all roles for an existing user with invalid token
         operationService.createUser(user,password);
         Exception e=Assertions.assertThrows(RuntimeException.class, () -> operationService.getAllRoles(user,token));
-        String expected="Invalid token dGVzdFVzZXJwdw==";
+        String expected="Invalid token ";
         String actual=e.getMessage();
         assertTrue(actual.contains(expected));
         //get all roles for an existing user with valid token

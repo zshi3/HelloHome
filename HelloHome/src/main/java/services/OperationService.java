@@ -1,29 +1,30 @@
 package services;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 
 import java.lang.runtime.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import entities.Token;
-import entities.User;
 
 public class OperationService {
 	//private static final Logger logger = LoggerFactory.getLogger(OperationService.class);
 	// Used to store user and its password
-	public Map<String, String> userInfo=new HashMap<String, String>();
+	public Map<String, String> userInfo=new ConcurrentHashMap<String, String>();
 	// Used to store role information
-	public Set<String> roleInfo=new HashSet<String>();
+	public Set<String> roleInfo= Collections.synchronizedSet(new HashSet<String>());
+
 	// Used to store all token information
-	public Set<Token> tokenSet = new HashSet<Token>();
+	public Set<Token> tokenSet = Collections.synchronizedSet(new HashSet<Token>());
 	// Used to store user and its roles
-	public Map<String, Set<String>> userMap=new HashMap<String,Set<String>>();
+	public Map<String, Set<String>> userMap=new ConcurrentHashMap<String,Set<String>>();
 	// Used to store user and its token
-	public Map<String,Token> userToken = new HashMap<String,Token>();
+	public Map<String,Token> userToken = new ConcurrentHashMap<String,Token>();
 	
 	public void createUser(String username, String password) {
 		if(userInfo.containsKey(username)) {
@@ -86,11 +87,14 @@ public class OperationService {
 	public boolean isValidUser(String userName,Token token) {
 		if(!userToken.containsKey(userName))
 			return false;
+		if(userToken.get(userName)==null){
+			return false;
+		}
 		if(userToken.get(userName).getTokenString().equals(token.getTokenString())) {
-			if((userToken.get(userName).getTokenTime()<=token.getTokenTime()))
+			if((userToken.get(userName).getTokenTime()<=token.getTokenTime())){
 				return true;
-			else
-			{
+			}
+			else {
 				return false;
 			}
 		}
@@ -101,10 +105,8 @@ public class OperationService {
 	}
 	
 	public Set<String> getAllRoles(String userName, Token token) {
-		Set<String> res = new HashSet<String>();
 		if(isValidUser(userName, token)) {
-			res=userMap.get(userName);
-			return res;
+			return userMap.get(userName);
 		}
 		else {
 			throw new RuntimeException("Invalid token "+token.getTokenString()+" for user "+userName);
@@ -112,8 +114,16 @@ public class OperationService {
 	}
 
 	public String encrypt(String str) {
-		    return Base64.encodeBase64String(str.getBytes());
+		try{
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			md.update(str.getBytes(StandardCharsets.UTF_8));
+			return Base64.encodeBase64String(md.digest());
 		}
+		catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
 	
 	public void authenticate(String username, String password) {
 		String s=encrypt(username+password);
@@ -122,24 +132,9 @@ public class OperationService {
 		tokenSet.add(token);
 	}
 	
-	public void invalidate(Token token) 
-	{
+	public void invalidate(Token token) {
 		token.setTokenTime(0);
 
-	}
-	public boolean isValid(Token token) {
-		if(tokenSet.contains(token)) {
-			if(token.getTokenTime()>2) {
-				return true;
-			}
-			else {
-				return false;
-			}
-				
-		}
-		else {
-			return false;
-		}
 	}
 
 }
